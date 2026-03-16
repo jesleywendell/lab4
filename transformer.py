@@ -77,3 +77,47 @@ def decoder_block(y, Z, params):
 
     ffn_out = feed_forward(y, params["W1"], params["b1"], params["W2"], params["b2"])
     return add_and_norm(y, ffn_out)
+
+
+if __name__ == "__main__":
+    torch.manual_seed(7)
+
+    d_model = 512
+    d_ff = d_model * 4
+    vocab_size = 100
+    num_layers = 6
+
+    VOCAB = [f"word_{i}" for i in range(vocab_size - 2)] + ["<START>", "<EOS>"]
+    START_IDX = vocab_size - 2
+    EOS_IDX = vocab_size - 1
+
+    enc_layers = [init_encoder_params(d_model, d_ff) for _ in range(num_layers)]
+    dec_layers = [init_decoder_params(d_model, d_ff, vocab_size) for _ in range(num_layers)]
+
+    encoder_input = torch.randn(1, 2, d_model)
+    print("Encoder input shape (simulating 'Thinking Machines'):", encoder_input.shape)
+
+    Z = encoder_input
+    for params in enc_layers:
+        Z = encoder_block(Z, params)
+    print("Encoder output Z shape:", Z.shape)
+
+    embedding_table = torch.randn(vocab_size, d_model)
+    current_ids = [START_IDX]
+    max_steps = 20
+
+    print(f"\nStarting generation: {[VOCAB[i] for i in current_ids]}")
+
+    while len(current_ids) < max_steps:
+        y = embedding_table[current_ids].unsqueeze(0)
+        for params in dec_layers:
+            y = decoder_block(y, Z, params)
+        logits = y[:, -1, :] @ dec_layers[-1]["W_proj"]
+        probs = F.softmax(logits, dim=-1)
+        next_idx = torch.argmax(probs, dim=-1).item()
+        current_ids.append(next_idx)
+        print(f"Step {len(current_ids) - 1}: '{VOCAB[next_idx]}'")
+        if next_idx == EOS_IDX:
+            break
+
+    print("\nGenerated sequence:", " ".join(VOCAB[i] for i in current_ids))
