@@ -22,3 +22,25 @@ def feed_forward(x, W1, b1, W2, b2):
 
 def add_and_norm(x, sublayer_out):
     return F.layer_norm(x + sublayer_out, x.shape[-1:])
+
+
+def init_encoder_params(d_model, d_ff):
+    return {
+        "W_q": torch.randn(d_model, d_model),
+        "W_k": torch.randn(d_model, d_model),
+        "W_v": torch.randn(d_model, d_model),
+        "W1": torch.randn(d_model, d_ff),
+        "b1": torch.zeros(d_ff),
+        "W2": torch.randn(d_ff, d_model),
+        "b2": torch.zeros(d_model),
+    }
+
+
+def encoder_block(x, params):
+    Q = x @ params["W_q"]
+    K = x @ params["W_k"]
+    V = x @ params["W_v"]
+    attn_out, _ = scaled_dot_product_attention(Q, K, V)
+    x = add_and_norm(x, attn_out)
+    ffn_out = feed_forward(x, params["W1"], params["b1"], params["W2"], params["b2"])
+    return add_and_norm(x, ffn_out)
