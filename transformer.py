@@ -1,10 +1,22 @@
-import sys
 import torch
 import torch.nn.functional as F
 
-sys.path.insert(0, "lab3")
-from task1_causal_mask import create_causal_mask
-from task2_cross_attention import cross_attention
+
+def create_causal_mask(seq_len):
+    return torch.triu(torch.full((seq_len, seq_len), float('-inf')), diagonal=1)
+
+
+def cross_attention(encoder_out, decoder_state):
+    d_model = encoder_out.shape[-1]
+    W_q = torch.randn(d_model, d_model)
+    W_k = torch.randn(d_model, d_model)
+    W_v = torch.randn(d_model, d_model)
+    Q = decoder_state @ W_q
+    K = encoder_out @ W_k
+    V = encoder_out @ W_v
+    scores = (Q @ K.transpose(-2, -1)) / (d_model ** 0.5)
+    weights = F.softmax(scores, dim=-1)
+    return weights @ V, weights
 
 
 def scaled_dot_product_attention(Q, K, V, mask=None):
